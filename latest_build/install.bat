@@ -1,0 +1,1 @@
+copy /y "%~dp0\BrCcClean.exe" "C:\Program Files (x86)\ControlCenter4\BrCcClean.exe"
