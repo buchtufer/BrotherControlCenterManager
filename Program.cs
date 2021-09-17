@@ -1,4 +1,4 @@
-﻿/* Brother Control Center Manager
+/* Brother Control Center Manager
  *  (directly launches Brother's Control Center 4 program, to avoid having to launch through Brother Utilities program,
  *   waits in background until UI is closed, closes background processes and removes icon from system tray, then exits)
  * ---------------------------------------------------------------------------------------------------------------------------------
@@ -25,6 +25,7 @@ using System.Threading;
 using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Data;
 
 namespace BrotherControlCenterManager
 {
@@ -54,11 +55,31 @@ namespace BrotherControlCenterManager
             if (Process.GetProcessesByName(Path.GetFileNameWithoutExtension(Assembly.GetEntryAssembly().Location)).Count() > 1)
                 Environment.Exit(0);
 
+            //wait for ControlCenter4 actual UI to start running
+            {
+                Stopwatch timer = new Stopwatch();
+                timer.Start();
+                long timeout_ms = 30000; //(2500 ms from monitor loop is insufficient at first startup)
+                do
+                {
+                    Thread.Sleep(100); //don't just keep checking constantly, allow other processes to run
+
+                    Process[] cc4UIprocesses = Process.GetProcessesByName(UI_PROC_NAME);
+                    foreach (Process proc in cc4UIprocesses)
+                    {
+                        if (proc.MainWindowHandle != IntPtr.Zero)
+                            goto UIrunning;
+                    }
+                }
+                while (timer.ElapsedMilliseconds < timeout_ms); //timeout so don't run forever, just in case (ex. fails to run or conflicts with another instance somehow)
+                UIrunning: { /* continue to monitoring */ }
+            }
+
             //monitor ControlCenter4 actual UI
             bool runningUI;
             do
             {
-                //wait, allow other processes to run (also allow app to start in first place)
+                //wait, allow other processes to run
                 Thread.Sleep(2500);
 
                 runningUI = false;
@@ -89,6 +110,10 @@ namespace BrotherControlCenterManager
 
             //exit
             Environment.Exit(0);
+        }
+
+        static void CheckUIRunning()
+        {
         }
 
         #region RefreshTrayArea
